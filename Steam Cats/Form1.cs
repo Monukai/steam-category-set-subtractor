@@ -23,18 +23,30 @@ namespace Steam_Cats
                 {
                     _valveDataFormatManager.SetFilePath(filepath);
 
-                    List<string> steamCategories = _valveDataFormatManager.ParseCategories();
-                    
-                    mainCatListBox.Items.Add(steamCategories);
-                    subsetCatListBox.Items.Add(steamCategories);
+                    List<string>? steamCategories = new List<string>();
+                    _valveDataFormatManager.ParseCategories(ref steamCategories);
+
+                    if (steamCategories == null)
+                    {
+                        ShowBadFilePathPopUp();
+                    }
+                    else
+                    {
+                        mainCatListBox.Items.Add(steamCategories);
+                        subsetCatListBox.Items.Add(steamCategories);
+                    }
                 }
                 else
                 {
-                    ToolTip badFilepathToolTip = new ToolTip();
-                    badFilepathToolTip.Tag = ValveDataFormatManager.INVALID_FILE;
-                    //badFilepathToolTip.Popup();
+                    ShowBadFilePathPopUp();
                 }
             }
+        }
+
+        private void ShowBadFilePathPopUp()
+        {
+            //ValveDataFormatManager.INVALID_FILE;
+            throw new NotImplementedException();
         }
     }
 }
