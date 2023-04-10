@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VdfConverter;
 using VdfParser;
+using System.Text.RegularExpressions;
 
 namespace Steam_Cats
 {
@@ -15,15 +16,17 @@ namespace Steam_Cats
         public static string TYPICAL_FILE_PATH = @"C:\Program Files (x86)\Steam\userdata\<steam id>\7\remote\sharedconfig.vdf";
 
         private string _filepath;
+        private bool _pathParsed;
         public string Filepath
         {
             get
             {
                 return _filepath;
             }
-            set
+            private set
             {
                 _filepath = value.Trim();
+                _pathParsed = false;
             }
         }
 
@@ -33,13 +36,13 @@ namespace Steam_Cats
         {
             _filepath = "";
             _categoriesParsed = new List<string>();
+            _pathParsed = false;
         }
 
         public bool ParseCategories(ref List<string> catsParsed, bool forceReparse = false)
         {
 
-            // add file.close to this method
-            if (_categoriesParsed.Count > 0)
+            if (_categoriesParsed.Count > 0 && _pathParsed == true)
             {
                 if (forceReparse == true)
                 {
@@ -66,7 +69,9 @@ namespace Steam_Cats
                 return false;
             }
 
-            var apps = result.UserRoamingConfigStore.Software.valve.Steam.apps as IDictionary<string, dynamic>;
+            // Some sharedconfig.vdf files have differing capitlization in their serialization keys, use GetTags method to resolve these descrepencies
+            IDictionary<string, dynamic> apps;
+            apps = GetTags(result);
 
             if (apps == null)
             {
@@ -97,6 +102,32 @@ namespace Steam_Cats
             catsParsed = _categoriesParsed;
             return true;
         }
+        
+        // TODO: Consider rewriting GetTags and DissectDes. with bool output for error checking, and making the returned IDict an out param
+        private static IDictionary<string, dynamic>? GetTags(dynamic result)
+        {
+            result = DissectDeserializedVDF("userroamingconfigstore", result);
+            result = DissectDeserializedVDF("software", result);
+            result = DissectDeserializedVDF("valve", result);
+            result = DissectDeserializedVDF("steam", result);
+            result = DissectDeserializedVDF("apps", result);
+
+            return result as IDictionary<string, dynamic>;
+        }
+        private static dynamic DissectDeserializedVDF(string vdfKey, dynamic parseResult)
+        {
+            foreach (string key in ((IDictionary<string, object>)parseResult).Keys)
+            {
+                if (Regex.IsMatch(key, vdfKey, RegexOptions.IgnoreCase) == true)
+                {
+                    var subset = parseResult as IDictionary<string, object>;
+                    parseResult = subset[key];
+                    return parseResult;
+                }
+            }
+
+            return parseResult;
+        }
 
         public bool GetAppsForCategory(ref List<int> appIds, string steamCat)
         {
@@ -117,7 +148,8 @@ namespace Steam_Cats
                 return false;
             }
 
-            var apps = result.UserRoamingConfigStore.Software.valve.Steam.apps as IDictionary<string, dynamic>;
+            IDictionary<string, dynamic> apps;
+            apps = GetTags(result);
 
             if (apps == null)
             {
@@ -173,7 +205,10 @@ namespace Steam_Cats
 
             try
             {
-                dynamic result = parser.Deserialize(sharedConfig);
+                dynamic result = parser.Deserialize(sharedConfig); 
+                //TODO: If GetTags is rewritting to return bool, reflect that here
+                IDictionary<string, dynamic> apps;
+                apps = GetTags(result);
             }
             catch (Exception ex)
             {
