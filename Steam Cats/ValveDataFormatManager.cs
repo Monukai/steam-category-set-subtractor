@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using VdfConverter;
@@ -10,11 +11,11 @@ namespace Steam_Cats
 {
     internal class ValveDataFormatManager
     {
-        public static string INVALID_FILE = "This is not a VDF file!";
+        public static string INVALID_FILE = "This is not a VDF file, or the sharedconfig.vdf file selected has no Steam category data.";
         public static string TYPICAL_FILE_PATH = @"C:\Program Files (x86)\Steam\userdata\<steam id>\7\remote\sharedconfig.vdf";
 
         private string _filepath;
-        private string Filepath
+        public string Filepath
         {
             get
             {
@@ -65,7 +66,7 @@ namespace Steam_Cats
                 return false;
             }
 
-            var apps = result.UserRoamingConfigStore.Software.Valve.Steam.Apps as IDictionary<string, dynamic>;
+            var apps = result.UserRoamingConfigStore.Software.valve.Steam.apps as IDictionary<string, dynamic>;
 
             if (apps == null)
             {
@@ -74,16 +75,20 @@ namespace Steam_Cats
 
             foreach (string appKey in apps.Keys)
             {
-                var tags = apps[appKey].tags as IDictionary<string, dynamic>;
-
-                if (tags != null)
+                if (((IDictionary<string, object>)apps[appKey]).ContainsKey("tags") == true)
                 {
-                    foreach (string tagIndex in tags.Keys)
+                    var tags = apps[appKey].tags as IDictionary<string, dynamic>;
+
+                    if (tags != null)
                     {
-                        if (_categoriesParsed.Contains(tags[tagIndex]) == false)
+                        foreach (string tagIndex in tags.Keys)
                         {
-                            _categoriesParsed.Add(tags[tagIndex]);
+                            if (_categoriesParsed.Contains(tags[tagIndex]) == false)
+                            {
+                                _categoriesParsed.Add(tags[tagIndex]);
+                            }
                         }
+
                     }
                 }
             }
@@ -112,7 +117,7 @@ namespace Steam_Cats
                 return false;
             }
 
-            var apps = result.UserRoamingConfigStore.Software.Valve.Steam.Apps as IDictionary<string, dynamic>;
+            var apps = result.UserRoamingConfigStore.Software.valve.Steam.apps as IDictionary<string, dynamic>;
 
             if (apps == null)
             {
@@ -121,21 +126,26 @@ namespace Steam_Cats
 
             foreach (string appKey in apps.Keys)
             {
-                var tags = apps[appKey].tags as IDictionary<string, dynamic>;
-
-                if (tags != null)
+                if (((IDictionary<string, object>)apps[appKey]).ContainsKey("tags") == true)
                 {
-                    foreach (string tagIndex in tags.Keys)
+                    var tags = apps[appKey].tags as IDictionary<string, dynamic>;
+
+                    if (tags != null)
                     {
-                        if (steamCat == tags[tagIndex])
+                        foreach (string tagIndex in tags.Keys)
                         {
-                            Int32.TryParse(appKey, out numericId);
-                            catAppIds.Add(numericId);
-                            numericId = 0;
+                            if (steamCat == tags[tagIndex])
+                            {
+                                Int32.TryParse(appKey, out numericId);
+                                catAppIds.Add(numericId);
+                                numericId = 0;
+                            }
                         }
                     }
                 }
             }
+
+            appIds = catAppIds;
 
             sharedConfig.Close();
             return true;
@@ -144,6 +154,11 @@ namespace Steam_Cats
         public void SetFilePath(string filepath)
         {
             Filepath = filepath;
+        }
+
+        public bool HasValidVDFFile()
+        {
+            return IsValidVDFFile(Filepath);
         }
 
         public static bool IsValidVDFFile(string filepath)
