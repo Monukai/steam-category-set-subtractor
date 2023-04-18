@@ -5,6 +5,7 @@ namespace Steam_Cats
     public partial class Form1 : Form
     {
         private ValveDataFormatManager _valveDataFormatManager;
+        private SteamAppDictionary _steamAppDictionary;
 
         private List<string>? _steamCategories;
 
@@ -21,6 +22,7 @@ namespace Steam_Cats
             { OnCompute_Click(sender, e, mainCatSelection, subsetCatSelection); };
 
             _steamCategories = new List<string>();
+            _steamAppDictionary = new SteamAppDictionary();
         }
 
 
@@ -61,10 +63,16 @@ namespace Steam_Cats
             }
         }
 
-        private void OnCompute_Click(object sender, EventArgs e, TextBox mainCat, TextBox subCat)
+        private async void OnCompute_Click(object sender, EventArgs e, TextBox mainCat, TextBox subCat)
         {
             if (_valveDataFormatManager.HasValidVDFFile() == true)
             {
+                newCatItemsList.Items.Clear();
+                if (_steamAppDictionary.HasLoaded() == false && _steamAppDictionary.IsLoading() == false)
+                {
+                    await _steamAppDictionary.LoadSteamAppData();
+                }
+
                 List<int>? mainCategoryApps = new List<int>();
                 List<int>? subCategoryApps = new List<int>();
                 List<int>? resultSetApps = new List<int>();
@@ -78,6 +86,22 @@ namespace Steam_Cats
 
                 // if 0 items, messagebox ("no items!") else >
 
+                AddNames(resultSetApps);
+                if (_steamAppDictionary.HasLoaded() == false)
+                {
+                    await Task.Run(() => ResolveNames(resultSetApps));
+                }
+            }
+            else
+            {
+                ShowBadFilePathPopUp();
+            }
+        }
+
+        private void AddNames(List<int> resultSetApps)
+        {
+            if (_steamAppDictionary.HasLoaded() == false)
+            {
                 foreach (int app in resultSetApps)
                 {
                     newCatItemsList.Items.Add(app.ToString());
@@ -85,8 +109,36 @@ namespace Steam_Cats
             }
             else
             {
-                ShowBadFilePathPopUp();
+                foreach (int app in resultSetApps)
+                {
+                    if (_steamAppDictionary.ContainsKey(app))
+                    {
+                        newCatItemsList.Items.Add(_steamAppDictionary[app]);
+                    }
+                    else
+                    {
+                        newCatItemsList.Items.Add(app.ToString());
+                    }
+                }
             }
+        }
+
+        private void ResolveNames(List<int> resultSetApps)
+        {
+            while (_steamAppDictionary.HasLoaded() == false)
+            {
+                if (_steamAppDictionary.IsLoading() == false && _steamAppDictionary.HasLoaded() == false)
+                {
+                    return;
+                }
+
+                Thread.Sleep(1000);
+            }
+
+            newCatItemsList.Items.Clear();
+            AddNames(resultSetApps);
+
+            return;
         }
 
         private void ShowBadFilePathPopUp()
