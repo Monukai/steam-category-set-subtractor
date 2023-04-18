@@ -206,7 +206,7 @@ namespace Steam_Cats
             try
             {
                 dynamic result = parser.Deserialize(sharedConfig); 
-                //TODO: If GetTags is rewritting to return bool, reflect that here
+                //TODO: If GetTags is rewritten to return bool, reflect that here
                 IDictionary<string, dynamic> apps;
                 apps = GetTags(result);
             }

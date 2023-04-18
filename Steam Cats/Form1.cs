@@ -73,20 +73,43 @@ namespace Steam_Cats
                 _valveDataFormatManager.GetAppsForCategory(ref subCategoryApps, subCat.Text);
 
                 // error check to make sure main cat and sub cat apps have items
+                string noItemsText = "No items found in {0}. Did you check your spelling?";
+                if (mainCategoryApps.Count == 0)
+                {
+                    ShowCustomPopUp(String.Format(noItemsText, mainCat.Text), "Empty Category", MessageBoxButtons.OK);
+                    return;
+                }
+                if (subCategoryApps.Count == 0)
+                {
+                    ShowCustomPopUp(String.Format(noItemsText, subCat.Text), "Empty Category", MessageBoxButtons.OK);
+                    return;
+                }
 
                 resultSetApps = mainCategoryApps.Except(subCategoryApps).ToList();
 
-                // if 0 items, messagebox ("no items!") else >
+                // if 0 items, messagebox ("no items!")
+                if (resultSetApps.Count == 0)
+                {
+                    ShowCustomPopUp("No items computed! Consider reversing the category order!", "No Resulting Items", MessageBoxButtons.OK);
+                    return;
+                }
 
                 foreach (int app in resultSetApps)
                 {
                     newCatItemsList.Items.Add(app.ToString());
                 }
+
+                // spawn new thread to attempt to resolve names of each app, using steampapifacilitator
             }
             else
             {
                 ShowBadFilePathPopUp();
             }
+        }
+
+        private void ShowCustomPopUp(string popUpText, string popUpTitle, MessageBoxButtons popUpButtons)
+        {
+            MessageBox.Show(popUpText, popUpTitle, popUpButtons);
         }
 
         private void ShowBadFilePathPopUp()
